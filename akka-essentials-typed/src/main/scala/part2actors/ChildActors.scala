@@ -73,6 +73,7 @@ object ChildActors {
     trait Command
     case class CreateChild(name: String)                extends Command
     case class TellChild(name: String, message: String) extends Command
+    case class StopChild(name: String)                  extends Command
 
     def apply(): Behavior[Command] = active(Map.empty[String, ActorRef[String]])
 
@@ -81,6 +82,10 @@ object ChildActors {
         case CreateChild(name) if childs.contains(name) =>
           context.log.info(s"[parent] Actor with '$name' already exists")
           active(childs)
+        case StopChild(name) if childs.contains(name) =>
+          context.log.info(s"[parent] Stopping actor with '$name' name'")
+          context.stop(childs(name))
+          active(childs - name)
         case CreateChild(name) =>
           context.log.info(s"[parent] Creating '$name' child actor")
           val child = context.spawn(Child(), name)
