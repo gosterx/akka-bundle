@@ -1,7 +1,7 @@
 package part2actors
 
 import akka.NotUsed
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior, Terminated}
 import akka.actor.typed.scaladsl.Behaviors
 
 object ChildActors {
@@ -11,6 +11,7 @@ object ChildActors {
     case class CreateChild(name: String)  extends Command
     case class TellChild(message: String) extends Command
     case object StopChild                 extends Command
+    case object WatchChild                extends Command
 
     def apply(): Behavior[Command] = idle()
 
@@ -23,21 +24,31 @@ object ChildActors {
       }
     }
 
-    def active(childRef: ActorRef[String]): Behavior[Command] = Behaviors.receive { (context, message) =>
-      message match {
-        case TellChild(message) =>
-          context.log.info(s"[parent] Sending message '$message' to child")
-          childRef ! message
-          Behaviors.same
-        case StopChild =>
-          context.log.info(s"[parent] Stopping child")
-          context.stop(childRef)
-          idle()
-        case _ =>
-          context.log.info("[parent] command not supported")
-          Behaviors.same
+    def active(childRef: ActorRef[String]): Behavior[Command] = Behaviors
+      .receive[Command] { (context, message) =>
+        message match {
+          case TellChild(message) =>
+            context.log.info(s"[parent] Sending message '$message' to child")
+            childRef ! message
+            Behaviors.same
+          case StopChild =>
+            context.log.info(s"[parent] Stopping child")
+            context.stop(childRef)
+            idle()
+          case WatchChild =>
+            context.log.info(s"[parent] Watching child")
+            context.watch(childRef) // can use any actor ref
+            Behaviors.same
+          case _ =>
+            context.log.info("[parent] command not supported")
+            Behaviors.same
+        }
       }
-    }
+      .receiveSignal {
+        case (context, Terminated(childRefWhichDied)) =>
+          context.log.info(s"[parent] Child ${childRefWhichDied.path} was killed by something...")
+          idle()
+      }
   }
 
   object Child {
@@ -56,6 +67,7 @@ object ChildActors {
       // set up the initial interaction between the actors
       parent ! CreateChild("child")
       parent ! TellChild("hey kid, you there?")
+      parent ! WatchChild
       parent ! StopChild
       parent ! CreateChild("child1")
       parent ! TellChild("hey kid, you there?1")
@@ -74,34 +86,41 @@ object ChildActors {
     case class CreateChild(name: String)                extends Command
     case class TellChild(name: String, message: String) extends Command
     case class StopChild(name: String)                  extends Command
+    case class WatchChild(name: String)                 extends Command
 
     def apply(): Behavior[Command] = active(Map.empty[String, ActorRef[String]])
 
-    def active(childs: Map[String, ActorRef[String]]): Behavior[Command] = Behaviors.receive { (context, message) =>
-      message match {
-        case CreateChild(name) if childs.contains(name) =>
-          context.log.info(s"[parent] Actor with '$name' already exists")
-          active(childs)
-        case StopChild(name) if childs.contains(name) =>
-          context.log.info(s"[parent] Stopping actor with '$name' name'")
-          context.stop(childs(name))
-          active(childs - name)
-        case CreateChild(name) =>
-          context.log.info(s"[parent] Creating '$name' child actor")
-          val child = context.spawn(Child(), name)
-          active(childs + (name -> child))
-        case TellChild(name, message) =>
-          childs.get(name) match {
-            case Some(child) =>
-              context.log.info(s"[parent] Sending '$message' to $name")
-              child ! message
-              Behaviors.same
-            case None =>
-              context.log.info(s"[parent] No such actor with name '$name'")
-              Behaviors.same
-          }
+    def active(childs: Map[String, ActorRef[String]]): Behavior[Command] = Behaviors
+      .receive[Command] { (context, message) =>
+        message match {
+          case CreateChild(name) if childs.contains(name) =>
+            context.log.info(s"[parent] Actor with '$name' already exists")
+            active(childs)
+          case CreateChild(name) =>
+            context.log.info(s"[parent] Creating '$name' child actor")
+            val child = context.spawn(Child(), name)
+            active(childs + (name -> child))
+          case TellChild(name, message) =>
+            val childOption = childs.get(name)
+            childOption.fold(context.log.info(s"[parent] Child $name could not be found"))(child => child ! message)
+            Behaviors.same
+          case StopChild(name) =>
+            context.log.info(s"[parent] Attempting to stop actor with '$name' name'")
+            val childOption = childs.get(name)
+            childOption.fold(context.log.info(s"[parent] Child $name could not be found"))(context.stop)
+            active(childs - name)
+          case WatchChild(name) =>
+            context.log.info(s"[parent] Attempting to watch on $name actor")
+            val childOption = childs.get(name)
+            childOption.fold(context.log.info(s"[parent] Child $name could not be found"))(context.watch)
+            Behaviors.same
+        }
       }
-    }
+      .receiveSignal {
+        case (context, Terminated(childRef)) =>
+          context.log.info(s"[parent] Actor ${childRef.path} was killed")
+          Behaviors.same
+      }
   }
 
   def demoParentChildV2(): Unit = {
