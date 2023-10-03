@@ -6,6 +6,7 @@ lazy val root =
     .settings(
       name := "akka-bundle"
     )
+    .dependsOn(`akka-essentials-typed`)
 
 lazy val `akka-essentials-typed` =
   project
