@@ -6,7 +6,7 @@ lazy val root =
     .settings(
       name := "akka-bundle"
     )
-    .aggregate(`akka-essentials-typed`)
+    .aggregate(`akka-essentials-typed`, `akka-persistence`)
 
 lazy val `akka-essentials-typed` =
   project
