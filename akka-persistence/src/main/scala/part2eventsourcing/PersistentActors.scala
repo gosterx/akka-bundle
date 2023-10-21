@@ -98,9 +98,9 @@ object PersistentActors extends App {
   accountant ! InvoiceBulk(newInvoices.toList)
 
   /*
-  * Shutdown of persistent actors
-  *
-  * Best practice: define your own "shutdown" message
-  * */
+   * Shutdown of persistent actors
+   *
+   * Best practice: define your own "shutdown" message
+   * */
   accountant ! Shutdown
 }
