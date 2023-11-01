@@ -6,7 +6,7 @@ lazy val root =
     .settings(
       name := "akka-bundle"
     )
-    .aggregate(`akka-essentials-typed`, `akka-persistence`)
+    .aggregate(`akka-essentials-typed`, `akka-persistence`, `akka-streams`)
 
 lazy val `akka-essentials-typed` =
   project
@@ -25,18 +25,31 @@ lazy val `akka-persistence` =
         "com.typesafe.akka" %% "akka-persistence" % "2.5.13",
 
         // local levelDB stores
-        "org.iq80.leveldb" % "leveldb" % "0.7",
+        "org.iq80.leveldb"          % "leveldb"        % "0.7",
         "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
 
         // JDBC with PostgreSQL
-        "org.postgresql" % "postgresql" % "42.2.2",
+        "org.postgresql"       % "postgresql"            % "42.2.2",
         "com.github.dnvriend" %% "akka-persistence-jdbc" % "3.4.0",
 
         // Cassandra
-        "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.91",
+        "com.typesafe.akka" %% "akka-persistence-cassandra"          % "0.91",
         "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % "0.91" % Test,
 
         // Google Protocol Buffers
         "com.google.protobuf" % "protobuf-java" % "3.6.1"
+      )
+    )
+
+lazy val `akka-streams` =
+  project
+    .in(file("akka-streams"))
+    .settings(
+      name := "akka-streams",
+      libraryDependencies ++= Seq(
+        "com.typesafe.akka" %% "akka-stream"         % "2.5.19",
+        "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.19",
+        "com.typesafe.akka" %% "akka-testkit"        % "2.5.19",
+        "org.scalatest"     %% "scalatest"           % "3.2.9"
       )
     )
