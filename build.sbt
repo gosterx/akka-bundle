@@ -6,7 +6,7 @@ lazy val root =
     .settings(
       name := "akka-bundle"
     )
-    .aggregate(`akka-essentials-typed`, `akka-persistence`, `akka-streams`)
+    .aggregate(`akka-essentials-typed`, `akka-persistence`, `akka-streams`, `akka-remoting-clustering`)
 
 lazy val `akka-essentials-typed` =
   project
@@ -51,5 +51,19 @@ lazy val `akka-streams` =
         "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.19",
         "com.typesafe.akka" %% "akka-testkit"        % "2.5.19",
         "org.scalatest"     %% "scalatest"           % "3.2.9"
+      )
+    )
+
+lazy val `akka-remoting-clustering` =
+  project
+    .in(file("akka-remoting-clustering"))
+    .settings(
+      name := "akka-remoting-clustering",
+      libraryDependencies ++= Seq(
+        "com.typesafe.akka" %% "akka-actor"            % "2.5.21",
+        "com.typesafe.akka" %% "akka-remote"           % "2.5.21",
+        "com.typesafe.akka" %% "akka-cluster"          % "2.5.21",
+        "com.typesafe.akka" %% "akka-cluster-sharding" % "2.5.21",
+        "com.typesafe.akka" %% "akka-cluster-tools"    % "2.5.21"
       )
     )
